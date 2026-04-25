@@ -5,8 +5,8 @@ from typing import List, Dict
 
 import requests
 
-from config import LEVER_COMPANIES, CUTOFF_DATE, REQUEST_TIMEOUT, MAX_RETRIES, RETRY_BACKOFF
-from utils.filters import match_location, match_title, is_blocked
+from config import LEVER_COMPANIES, CUTOFF_DATE, REQUEST_TIMEOUT, MAX_RETRIES, RETRY_BACKOFF, COMPANY_STAGES
+from utils.filters import match_location, is_eligible, is_blocked
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +40,11 @@ def scrape() -> List[Dict]:
             location_raw = categories.get("location", "") or ""
             created_ms = job.get("createdAt")
             apply_url = job.get("hostedUrl", "")
+            description = job.get("descriptionPlain", "") or ""
 
-            if not match_title(title):
-                continue
             if is_blocked(company):
+                continue
+            if not is_eligible(title, description):
                 continue
 
             city = match_location(location_raw)
@@ -58,9 +59,11 @@ def scrape() -> List[Dict]:
                     continue
                 date_str = dt.date().isoformat()
 
+            stage = COMPANY_STAGES.get(company.lower(), "unknown")
+
             results.append({
-                "company_name": company,
-                "company_stage": "unknown",
+                "company_name": company.title(),
+                "company_stage": stage,
                 "role_title": title,
                 "location": city,
                 "date_posted": date_str,

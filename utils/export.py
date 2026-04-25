@@ -3,35 +3,12 @@ from datetime import date
 from typing import List, Dict
 import pandas as pd
 
+from utils.filters import categorize_role
+
 COLUMNS = [
     "company_name", "company_stage", "role_title", "location",
     "date_posted", "application_url", "source", "scraped_at",
 ]
-
-ROLE_CATEGORIES = {
-    "SWE": [
-        "software", "full stack", "fullstack", "full-stack", "backend", "back-end",
-        "frontend", "front-end", "platform", "infrastructure", "devops",
-        "site reliability", "mobile", "ios", "android", "web developer", "product engineer",
-    ],
-    "Data/Quant": [
-        "data engineer", "data science", "data analyst", "quantitative", "quant",
-        "machine learning", "ml engineer", "ai engineer", "analytics",
-    ],
-    "Finance": [
-        "venture capital", "vc analyst", "investment", "equity research",
-        "asset management", "portfolio", "financial analyst", "deal",
-    ],
-    "Consulting": ["strategy", "consulting", "operations", "business analyst", "biz ops"],
-}
-
-
-def _categorize(title: str) -> str:
-    t = title.lower()
-    for cat, keywords in ROLE_CATEGORIES.items():
-        if any(kw in t for kw in keywords):
-            return cat
-    return "Other"
 
 
 def save_csv(jobs: List[Dict], output_dir: str = "results") -> str:
@@ -60,7 +37,7 @@ def print_summary(jobs: List[Dict], csv_path: str) -> None:
         city = j.get("location", "unknown")
         city_counts[city] = city_counts.get(city, 0) + 1
 
-        cat = _categorize(j.get("role_title", ""))
+        cat = categorize_role(j.get("role_title", ""))
         role_counts[cat] = role_counts.get(cat, 0) + 1
 
         src = j.get("source", "unknown").capitalize()

@@ -1,15 +1,15 @@
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from typing import List, Dict
 
 import requests
 
-from config import ASHBY_COMPANIES, CUTOFF_DATE, REQUEST_TIMEOUT, MAX_RETRIES, RETRY_BACKOFF
-from utils.filters import match_location, match_title, is_blocked
+from config import ASHBY_COMPANIES, CUTOFF_DATE, REQUEST_TIMEOUT, MAX_RETRIES, RETRY_BACKOFF, COMPANY_STAGES
+from utils.filters import match_location, is_eligible, is_blocked
 
 logger = logging.getLogger(__name__)
-
 
 
 def _get_with_retry(url: str) -> dict | None:
@@ -36,6 +36,10 @@ def _parse_date(date_str: str | None) -> datetime | None:
         return None
 
 
+def _strip_html(html: str) -> str:
+    return re.sub(r"<[^>]+>", " ", html)
+
+
 def scrape() -> List[Dict]:
     results = []
     for company in ASHBY_COMPANIES:
@@ -49,11 +53,12 @@ def scrape() -> List[Dict]:
             title = job.get("title", "")
             location_raw = job.get("location", "") or ""
             published_date = job.get("publishedAt", "") or job.get("publishedDate", "")
-            apply_url = job.get("applyUrl", "") or job.get("jobUrl", "") or job.get("applicationUrl", "")
+            apply_url = job.get("applyUrl", "") or job.get("jobUrl", "") or ""
+            description = _strip_html(job.get("descriptionHtml", "") or job.get("descriptionPlain", "") or "")
 
-            if not match_title(title):
-                continue
             if is_blocked(company):
+                continue
+            if not is_eligible(title, description):
                 continue
 
             city = match_location(location_raw)
@@ -64,7 +69,6 @@ def scrape() -> List[Dict]:
             if dt and dt < CUTOFF_DATE:
                 continue
 
-            # Derive display name from applyUrl host path or title-case the slug
             job_url = job.get("jobUrl", "")
             if "ashbyhq.com/" in job_url:
                 slug_from_url = job_url.split("ashbyhq.com/")[-1].split("/")[0]
@@ -72,9 +76,11 @@ def scrape() -> List[Dict]:
             else:
                 company_display = company.replace("-", " ").title()
 
+            stage = COMPANY_STAGES.get(company.lower(), "unknown")
+
             results.append({
                 "company_name": company_display,
-                "company_stage": "unknown",
+                "company_stage": stage,
                 "role_title": title,
                 "location": city,
                 "date_posted": dt.date().isoformat() if dt else "unknown",

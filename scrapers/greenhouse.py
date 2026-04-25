@@ -5,11 +5,10 @@ from typing import List, Dict
 
 import requests
 
-from config import GREENHOUSE_COMPANIES, CUTOFF_DATE, REQUEST_TIMEOUT, MAX_RETRIES, RETRY_BACKOFF
-from utils.filters import match_location, match_title, is_blocked
+from config import GREENHOUSE_COMPANIES, CUTOFF_DATE, REQUEST_TIMEOUT, MAX_RETRIES, RETRY_BACKOFF, COMPANY_STAGES
+from utils.filters import match_location, is_eligible, is_blocked
 
 logger = logging.getLogger(__name__)
-
 
 
 def _get_with_retry(url: str) -> dict | list | None:
@@ -39,7 +38,7 @@ def _parse_date(date_str: str | None) -> datetime | None:
 def scrape() -> List[Dict]:
     results = []
     for company in GREENHOUSE_COMPANIES:
-        url = f"https://boards-api.greenhouse.io/v1/boards/{company}/jobs"
+        url = f"https://boards-api.greenhouse.io/v1/boards/{company}/jobs?content=true"
         data = _get_with_retry(url)
         if not data:
             continue
@@ -52,9 +51,12 @@ def scrape() -> List[Dict]:
             apply_url = job.get("absolute_url", "")
             company_display = job.get("company_name") or company
 
-            if not match_title(title):
-                continue
+            # Pull plain-text description for degree/experience filtering
+            content = job.get("content", "") or ""
+
             if is_blocked(company_display):
+                continue
+            if not is_eligible(title, content):
                 continue
 
             city = match_location(location_raw)
@@ -65,9 +67,11 @@ def scrape() -> List[Dict]:
             if dt and dt < CUTOFF_DATE:
                 continue
 
+            stage = COMPANY_STAGES.get(company.lower(), "unknown")
+
             results.append({
                 "company_name": company_display,
-                "company_stage": "unknown",
+                "company_stage": stage,
                 "role_title": title,
                 "location": city,
                 "date_posted": dt.date().isoformat() if dt else "unknown",
