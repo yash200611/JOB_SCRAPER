@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Internship Finder</title>
+
+<!-- AG Grid Community -->
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/dist/ag-grid-community.min.js"></script>
+
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a23;
+    --border: #2a2a38;
+    --text: #e2e2f0;
+    --muted: #7a7a99;
+    --accent: #6c63ff;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --orange: #f97316;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .status {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+  }
+  .dot.running { background: var(--yellow); animation: pulse 1s infinite; }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+  }
+
+  .toolbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .toolbar input[type=text] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 220px;
+    outline: none;
+  }
+  .toolbar input[type=text]:focus { border-color: var(--accent); }
+  .toolbar input::placeholder { color: var(--muted); }
+
+  select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  button {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .count-pill {
+    font-size: 12px;
+    background: var(--border);
+    color: var(--muted);
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: auto;
+  }
+
+  .grid-wrap {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  #grid {
+    height: 100%;
+    width: 100%;
+  }
+
+  /* ---- AG Grid theme overrides ---- */
+  .ag-theme-alpine-dark {
+    --ag-background-color: var(--bg);
+    --ag-header-background-color: var(--surface);
+    --ag-odd-row-background-color: #13131a;
+    --ag-row-hover-color: #1e1e2d;
+    --ag-border-color: var(--border);
+    --ag-header-foreground-color: var(--muted);
+    --ag-foreground-color: var(--text);
+    --ag-font-size: 13px;
+    --ag-row-height: 38px;
+    --ag-header-height: 38px;
+    --ag-cell-horizontal-padding: 14px;
+    --ag-selected-row-background-color: #26263a;
+    --ag-range-selection-border-color: var(--accent);
+  }
+
+  .ag-header-cell-label { font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* source color chips */
+  .chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .chip-greenhouse { background: #14532d; color: #86efac; }
+  .chip-lever      { background: #1e3a5f; color: #93c5fd; }
+  .chip-ashby      { background: #3b1f6e; color: #c4b5fd; }
+  .chip-yc         { background: #7c2d12; color: #fdba74; }
+  .chip-wellfound  { background: #1f3a2f; color: #6ee7b7; }
+  .chip-hackernews { background: #451a03; color: #fde68a; }
+
+  .link-cell a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 12px;
+    padding: 2px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+  }
+  .link-cell a:hover { background: var(--accent); color: #fff; }
+
+  .new-badge {
+    background: var(--green);
+    color: #000;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  footer {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 20px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  #toast {
+    position: fixed;
+    bottom: 48px;
+    right: 20px;
+    background: var(--green);
+    color: #000;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    display: none;
+    z-index: 999;
+    animation: fadeIn 0.3s;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Internship Finder</h1>
+  <span class="badge" id="total-badge">0 jobs</span>
+  <div class="status">
+    <span class="dot" id="status-dot"></span>
+    <span id="status-text">Loading…</span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <input type="text" id="quick-filter" placeholder="Search title, company, location…" />
+
+  <select id="source-filter">
+    <option value="">All sources</option>
+    <option value="greenhouse">Greenhouse</option>
+    <option value="lever">Lever</option>
+    <option value="ashby">Ashby</option>
+    <option value="yc">YC</option>
+    <option value="wellfound">Wellfound</option>
+    <option value="hackernews">Hacker News</option>
+  </select>
+
+  <select id="location-filter">
+    <option value="">All locations</option>
+  </select>
+
+  <select id="role-filter">
+    <option value="">All roles</option>
+    <option value="SWE">SWE</option>
+    <option value="Data">Data / Quant</option>
+    <option value="Finance">Finance</option>
+    <option value="Consulting">Consulting</option>
+  </select>
+
+  <button class="btn-ghost" id="reset-btn">Reset filters</button>
+  <button class="btn-primary" id="run-btn">⟳ Scrape now</button>
+
+  <span class="count-pill" id="count-pill">Showing 0</span>
+</div>
+
+<div class="grid-wrap">
+  <div id="grid" class="ag-theme-alpine-dark"></div>
+</div>
+
+<footer>
+  <span id="footer-run">Last run: —</span>
+  <span id="footer-source-counts"></span>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+// ---- helpers ----
+const ROLE_KEYWORDS = {
+  SWE: ["software","full stack","fullstack","full-stack","backend","frontend","platform","infrastructure","devops","mobile","ios","android","web developer","product engineer","site reliability"],
+  "Data": ["data engineer","data science","data analyst","quantitative","quant","machine learning","ml engineer","ai engineer","analytics"],
+  Finance: ["venture capital","vc analyst","investment","equity research","asset management","portfolio","financial analyst","deal"],
+  Consulting: ["strategy","consulting","operations","business analyst","biz ops"],
+};
+
+function categorize(title) {
+  const t = title.toLowerCase();
+  for (const [cat, kws] of Object.entries(ROLE_KEYWORDS)) {
+    if (kws.some(k => t.includes(k))) return cat;
+  }
+  return "Other";
+}
+
+function timeSince(iso) {
+  if (!iso) return "—";
+  const diff = (Date.now() - new Date(iso)) / 1000;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return Math.floor(diff/60) + "m ago";
+  if (diff < 86400) return Math.floor(diff/3600) + "h ago";
+  return Math.floor(diff/86400) + "d ago";
+}
+
+const seenKeys = new Set();
+let allJobs = [];
+let gridApi = null;
+let lastRunTs = null;
+const runStartTs = Date.now();
+
+// ---- AG Grid column defs ----
+const colDefs = [
+  {
+    field: "company_name",
+    headerName: "Company",
+    width: 160,
+    cellRenderer: p => {
+      const isNew = p.data._isNew;
+      return `${p.value}${isNew ? '<span class="new-badge">NEW</span>' : ''}`;
+    },
+    pinned: "left",
+  },
+  { field: "role_title",    headerName: "Role",     flex: 2, minWidth: 220,
+    cellRenderer: p => `<span title="${p.value}">${p.value}</span>` },
+  { field: "_category",     headerName: "Category", width: 120 },
+  { field: "location",      headerName: "Location", width: 140 },
+  { field: "date_posted",   headerName: "Posted",   width: 110,
+    sort: "desc",
+    comparator: (a, b) => {
+      if (a === "unknown") return 1;
+      if (b === "unknown") return -1;
+      return a < b ? -1 : a > b ? 1 : 0;
+    }
+  },
+  {
+    field: "source",
+    headerName: "Source",
+    width: 120,
+    cellRenderer: p => `<span class="chip chip-${p.value}">${p.value}</span>`,
+  },
+  { field: "company_stage", headerName: "Stage",    width: 100 },
+  {
+    field: "application_url",
+    headerName: "Apply",
+    width: 90,
+    sortable: false,
+    cellRenderer: p => `<div class="link-cell"><a href="${p.value}" target="_blank" rel="noopener">Apply →</a></div>`,
+  },
+];
+
+// ---- init grid ----
+const gridOptions = {
+  columnDefs: colDefs,
+  rowData: [],
+  defaultColDef: {
+    sortable: true,
+    filter: true,
+    resizable: true,
+  },
+  animateRows: true,
+  suppressCellFocus: false,
+  onFilterChanged: updateCount,
+  onSortChanged: updateCount,
+};
+
+const gridEl = document.getElementById("grid");
+gridApi = agGrid.createGrid(gridEl, gridOptions);
+
+// ---- populate grid ----
+function applyJobs(jobs) {
+  const newKeys = new Set();
+  const rows = jobs.map(j => {
+    const key = [j.company_name, j.role_title, j.location].join("|").toLowerCase();
+    newKeys.add(key);
+    const isNew = !seenKeys.has(key);
+    return { ...j, _category: categorize(j.role_title), _isNew: isNew };
+  });
+
+  newKeys.forEach(k => seenKeys.add(k));
+  allJobs = rows;
+  gridApi.setGridOption("rowData", rows);
+  updateLocationFilter(rows);
+  updateCount();
+  updateBadge(rows.length);
+  updateFooterCounts(rows);
+}
+
+function updateCount() {
+  const displayed = [];
+  gridApi.forEachNodeAfterFilter(n => displayed.push(n));
+  document.getElementById("count-pill").textContent = `Showing ${displayed.length}`;
+}
+
+function updateBadge(n) {
+  document.getElementById("total-badge").textContent = `${n} jobs`;
+}
+
+function updateFooterCounts(rows) {
+  const counts = {};
+  rows.forEach(r => { counts[r.source] = (counts[r.source]||0)+1; });
+  document.getElementById("footer-source-counts").textContent =
+    Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`${s}: ${n}`).join("  ·  ");
+}
+
+function updateLocationFilter(rows) {
+  const locs = [...new Set(rows.map(r=>r.location).filter(Boolean))].sort();
+  const sel = document.getElementById("location-filter");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All locations</option>';
+  locs.forEach(l => {
+    const o = document.createElement("option");
+    o.value = l; o.textContent = l;
+    if (l === current) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+// ---- filters ----
+document.getElementById("quick-filter").addEventListener("input", e => {
+  gridApi.setGridOption("quickFilterText", e.target.value);
+  updateCount();
+});
+
+document.getElementById("source-filter").addEventListener("change", applyExternalFilters);
+document.getElementById("location-filter").addEventListener("change", applyExternalFilters);
+document.getElementById("role-filter").addEventListener("change", applyExternalFilters);
+
+function applyExternalFilters() {
+  const src = document.getElementById("source-filter").value;
+  const loc = document.getElementById("location-filter").value;
+  const role = document.getElementById("role-filter").value;
+
+  const model = {};
+  if (src)  model["source"]    = { type: "equals", filter: src };
+  if (loc)  model["location"]  = { type: "equals", filter: loc };
+  if (role) model["_category"] = { type: "contains", filter: role };
+  gridApi.setFilterModel(model);
+  updateCount();
+}
+
+document.getElementById("reset-btn").addEventListener("click", () => {
+  document.getElementById("quick-filter").value = "";
+  document.getElementById("source-filter").value = "";
+  document.getElementById("location-filter").value = "";
+  document.getElementById("role-filter").value = "";
+  gridApi.setGridOption("quickFilterText", "");
+  gridApi.setFilterModel({});
+  updateCount();
+});
+
+// ---- run now ----
+const runBtn = document.getElementById("run-btn");
+runBtn.addEventListener("click", async () => {
+  runBtn.disabled = true;
+  runBtn.textContent = "Running…";
+  setStatus(true);
+  await fetch("/api/run", { method: "POST" });
+  setTimeout(() => {
+    runBtn.disabled = false;
+    runBtn.textContent = "⟳ Scrape now";
+  }, 5000);
+});
+
+// ---- status helpers ----
+function setStatus(running, ts) {
+  const dot = document.getElementById("status-dot");
+  const txt = document.getElementById("status-text");
+  if (running) {
+    dot.className = "dot running";
+    txt.textContent = "Scraping…";
+  } else {
+    dot.className = "dot";
+    txt.textContent = ts ? `Updated ${timeSince(ts)}` : "Live";
+  }
+  if (ts) {
+    lastRunTs = ts;
+    document.getElementById("footer-run").textContent = `Last run: ${new Date(ts).toLocaleString()}`;
+    // refresh relative times every minute
+  }
+}
+
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.style.display = "block";
+  setTimeout(() => { el.style.display = "none"; }, 3500);
+}
+
+// ---- initial data fetch ----
+async function loadJobs() {
+  const res = await fetch("/api/jobs");
+  const data = await res.json();
+  applyJobs(data.jobs || []);
+  setStatus(data.running, data.last_run);
+}
+loadJobs();
+
+// ---- SSE ----
+let es;
+function connectSSE() {
+  es = new EventSource("/stream");
+
+  es.onmessage = async (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "ping") return;
+
+    if (msg.type === "update") {
+      const res = await fetch("/api/jobs");
+      const data = await res.json();
+      const prev = allJobs.length;
+      applyJobs(data.jobs || []);
+      setStatus(false, msg.ts);
+      const added = allJobs.length - prev;
+      if (added > 0) showToast(`+${added} new posting${added>1?"s":""}!`);
+      else showToast("Jobs updated");
+    }
+    if (msg.type === "init") {
+      setStatus(msg.running, msg.ts);
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    setTimeout(connectSSE, 5000);
+  };
+}
+connectSSE();
+
+// Update relative time every 60s
+setInterval(() => {
+  if (lastRunTs) setStatus(false, lastRunTs);
+}, 60000);
+</script>
+</body>
+</html>
